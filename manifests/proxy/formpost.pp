@@ -16,12 +16,11 @@
 # Copyright 2012 eNovance licensing@enovance.com
 #
 
-class swift::proxy::formpost() {
+class swift::proxy::formpost {
 
-  concat::fragment { 'swift-proxy-formpost':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/formpost.conf.erb'),
-    order   => '31',
+  $filter = 'filter:formpost'
+
+  swift_proxy_config {
+    "${filter}/use": value  => 'egg:swift#formpost';
   }
-
 }
