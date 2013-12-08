@@ -1,9 +1,8 @@
-class swift::proxy::tempauth() {
+class swift::proxy::tempauth {
 
-  concat::fragment { 'swift-proxy-swauth':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/tempauth.conf.erb'),
-    order   => '01',
+  $filter = 'filter:tempauth'
+
+  swift_proxy_config {
+    "${filter}/use": value  => 'egg:swift#tempauth';
   }
-
 }
