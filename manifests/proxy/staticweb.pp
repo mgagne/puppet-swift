@@ -16,12 +16,11 @@
 # Copyright 2012 eNovance licensing@enovance.com
 #
 
-class swift::proxy::staticweb() {
+class swift::proxy::staticweb {
 
-  concat::fragment { 'swift-proxy-staticweb':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/staticweb.conf.erb'),
-    order   => '32',
+  $filter = 'filter:staticweb'
+
+  swift_proxy_config {
+    "${filter}/use": value  => 'egg:swift#staticweb';
   }
-
 }
