@@ -2,47 +2,63 @@ require 'spec_helper'
 
 describe 'swift::proxy::keystone' do
 
-  let :facts do
-    {
-      :concat_basedir => '/var/lib/puppet/concat',
-    }
+  let :default_params do
+    { :operator_roles => ['admin', 'SwiftOperator'],
+      :is_admin       => true }
   end
 
-  let :fragment_file do
-    '/var/lib/puppet/concat/_etc_swift_proxy-server.conf/fragments/79_swift_keystone'
+  let :params do
+    {}
   end
 
-  let :pre_condition do
-    '
-      include concat::setup
-      concat { "/etc/swift/proxy-server.conf": }
-    '
-  end
-
-  it { should contain_file(fragment_file).with_content(/[filter:keystone]/) }
-
-  it { should contain_file(fragment_file).with_content(/use = egg:swift#keystoneauth/) }
-
-  describe 'with defaults' do
-
-    it { should contain_file(fragment_file).with_content(/operator_roles = admin, SwiftOperator/) }
-    it { should contain_file(fragment_file).with_content(/is_admin = true/) }
-
-  end
-
-  describe 'with parameter overrides' do
-
-    let :params do
-      {
-        :operator_roles => 'foo',
-        :is_admin       => 'false',
-      }
-
-      it { should contain_file(fragment_file).with_content(/operator_roles = foo/) }
-      it { should contain_file(fragment_file).with_content(/is_admin = false/) }
-
+  shared_examples_for 'configures keystone filter' do
+    let :p do
+      default_params.merge(params)
     end
 
+    it 'configures filter' do
+      should contain_swift_proxy_config(
+        "filter:keystone/use").with_value('egg:swift#keystoneauth')
+      should contain_swift_proxy_config(
+        "filter:keystone/is_admin").with_value(p[:is_admin])
+    end
+
+    it 'configures operator_roles' do
+      if p[:operator_roles].kind_of?(Array)
+        expected = p[:operator_roles].join(', ')
+      else
+        expected = p[:operator_roles]
+      end
+      should contain_swift_proxy_config(
+        "filter:keystone/operator_roles").with_value(expected)
+    end
   end
 
+  context 'when using default parameters' do
+    it_behaves_like 'configures keystone filter'
+  end
+
+  context 'when overriding default parameters' do
+
+    context 'with operator_roles with 1 item (String)' do
+      before do
+        params.merge!(:operator_roles => 'admin')
+      end
+      it_behaves_like 'configures keystone filter'
+    end
+
+    context 'with operator_roles with 1 item (Array)' do
+      before do
+        params.merge!(:operator_roles => ['admin'])
+      end
+      it_behaves_like 'configures keystone filter'
+    end
+
+    context 'with operator_roles with 2 items (Array)' do
+      before do
+        params.merge!(:operator_roles => ['admin', 'foo'])
+      end
+      it_behaves_like 'configures keystone filter'
+    end
+  end
 end

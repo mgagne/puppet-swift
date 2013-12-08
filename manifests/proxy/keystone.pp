@@ -20,10 +20,17 @@ class swift::proxy::keystone(
   $is_admin            = true
 ) {
 
-  concat::fragment { 'swift_keystone':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/keystone.conf.erb'),
-    order   => '79',
+  $filter = 'filter:keystone'
+
+  if is_array($operator_roles) {
+    $operator_roles_real = join($operator_roles, ', ')
+  } else {
+    $operator_roles_real = $operator_roles
   }
 
+  swift_proxy_config {
+    "${filter}/use":            value  => 'egg:swift#keystoneauth';
+    "${filter}/is_admin":       value  => $is_admin;
+    "${filter}/operator_roles": value  => $operator_roles_real;
+  }
 }
