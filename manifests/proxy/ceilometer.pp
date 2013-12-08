@@ -19,15 +19,13 @@ class swift::proxy::ceilometer(
   $ensure = 'present'
 ) inherits swift {
 
+  $filter = 'filter:ceilometer'
+
   User['swift'] {
     groups +> 'ceilometer',
   }
 
-  concat::fragment { 'swift_ceilometer':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/ceilometer.conf.erb'),
-    order   => '33',
-    require => Class['::ceilometer']
+  swift_proxy_config {
+    "${filter}/use": value  => 'egg:ceilometer#swift';
   }
-
 }
