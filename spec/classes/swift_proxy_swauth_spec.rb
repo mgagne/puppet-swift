@@ -2,46 +2,52 @@ require 'spec_helper'
 
 describe 'swift::proxy::swauth' do
 
-  let :facts do
-    {
-      :concat_basedir => '/var/lib/puppet/concat'
-    }
+  let :default_params do
+    { :swauth_endpoint        => '127.0.0.1',
+      :swauth_super_admin_key => 'swauthkey',
+      :package_ensure         => 'present' }
   end
 
-  let :pre_condition do
-    'class { "concat::setup": }
-     concat { "/etc/swift/proxy-server.conf": }'
+  let :params do
+    {}
   end
 
-  let :fragment_file do
-    "/var/lib/puppet/concat/_etc_swift_proxy-server.conf/fragments/20_swift_proxy_swauth"
-  end
-
-  it { should contain_package('python-swauth').with_ensure('present') }
-
-  it { should contain_file(fragment_file).with_content(/[filter:swauth]/) }
-  it { should contain_file(fragment_file).with_content(/use = egg:swauth#swauth/) }
-
-  describe 'with defaults' do
-
-    it { should contain_file(fragment_file).with_content(/default_swift_cluster = local#127\.0\.0\.1/) }
-    it { should contain_file(fragment_file).with_content(/super_admin_key = swauthkey/) }
-
-  end
-
-  describe 'with overridden parameters' do
-
-    let :params do
-      {:swauth_endpoint => '10.0.0.1',
-       :swauth_super_admin_key => 'foo',
-       :package_ensure => 'latest' }
+  shared_examples_for 'swauth filter' do
+    let :p do
+      default_params.merge(params)
     end
 
-    it { should contain_file(fragment_file).with_content(/default_swift_cluster = local#10\.0\.0\.1/) }
-    it { should contain_file(fragment_file).with_content(/super_admin_key = foo/) }
-    it { should contain_package('python-swauth').with_ensure('latest') }
+    it { should contain_package('python-swauth').with_ensure(p[:package_ensure]) }
 
+    it 'configures swauth filter' do
+      should contain_swift_proxy_config(
+          'filter:swauth/use').with_value('egg:swift#swauth')
+    end
+
+    [ 'swauth_endpoint',
+      'swauth_super_admin_key'
+    ].each do |config|
+      it "configures #{config} of swauth filter" do
+        should contain_swift_proxy_config(
+          "filter:swauth/#{config}").with_value(p[config.to_sym])
+      end
+    end
   end
 
+  context 'with default parameters' do
+    it_behaves_like 'swauth filter'
+  end
+
+  context 'when overriding default parameters' do
+    before do
+      params.merge!(
+       :swauth_endpoint        => '10.0.0.1',
+       :swauth_super_admin_key => 'foo',
+       :package_ensure         => 'latest'
+      )
+    end
+
+    it_behaves_like 'swauth filter'
+  end
 end
 
