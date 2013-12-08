@@ -7,9 +7,9 @@
 #
 class swift::proxy::proxy_logging {
 
-  concat::fragment { 'swift_proxy-logging':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/proxy-logging.conf.erb'),
-    order   => '27',
+  $filter = 'filter:proxy-logging'
+
+  swift_proxy_config {
+    "${filter}/use": value  => 'egg:swift#proxy_logging';
   }
 }

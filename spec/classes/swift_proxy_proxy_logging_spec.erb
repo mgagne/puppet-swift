@@ -1,0 +1,9 @@
+require 'spec_helper'
+
+describe 'swift::proxy::proxy_logging' do
+
+  it 'configures proxy-logging filter' do
+    should contain_swift_proxy_config(
+      'filter:proxy-logging/use').with_value('egg:swift#proxy_logging')
+  end
+end
