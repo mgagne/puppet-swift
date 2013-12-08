@@ -38,15 +38,20 @@
 # Default to 60.
 #
 
-class swift::proxy::bulk(
-  $max_containers_per_extraction = '10000',
-  $max_failed_extractions        = '1000',
-  $max_deletes_per_request       = '10000',
-  $yield_frequency               = '60',
+class swift::proxy::bulk (
+  $max_containers_per_extraction = 10000,
+  $max_failed_extractions        = 1000,
+  $max_deletes_per_request       = 10000,
+  $yield_frequency               = 60,
 ) {
-  concat::fragment { 'swift_bulk':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/bulk.conf.erb'),
-    order   => '21',
+
+  $filter = 'filter:bulk'
+
+  swift_proxy_config {
+    "${filter}/use":                           value  => 'egg:swift#bulk';
+    "${filter}/max_containers_per_extraction": value  => $max_containers_per_extraction;
+    "${filter}/max_failed_extractions":        value  => $max_failed_extractions;
+    "${filter}/max_deletes_per_request":       value  => $max_deletes_per_request;
+    "${filter}/yield_frequency":               value  => $yield_frequency;
   }
 }

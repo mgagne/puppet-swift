@@ -22,57 +22,47 @@ require 'spec_helper'
 
 describe 'swift::proxy::bulk' do
 
-  let :facts do
-    {
-      :concat_basedir => '/var/lib/puppet/concat'
-    }
+  let :default_params do
+    { :max_containers_per_extraction => 10000,
+      :max_failed_extractions        => 1000,
+      :max_deletes_per_request       => 10000,
+      :yield_frequency               => 60 }
   end
 
-  let :pre_condition do
-    'class { "concat::setup": }
-    concat { "/etc/swift/proxy-server.conf": }'
+  let :params do
+    {}
   end
 
-  let :fragment_file do
-    "/var/lib/puppet/concat/_etc_swift_proxy-server.conf/fragments/21_swift_bulk"
-  end
+  shared_examples_for 'configures bulk filter' do
+    let :p do
+      default_params.merge(params)
+    end
 
-  describe "when using default parameters" do
-    it 'should build the fragment with correct parameters' do
-      verify_contents(subject, fragment_file,
-        [
-          '[filter:bulk]',
-          'use = egg:swift#bulk',
-          'max_containers_per_extraction = 10000',
-          'max_failed_extractions = 1000',
-          'max_deletes_per_request = 10000',
-          'yield_frequency = 60',
-        ]
-      )
+    [ 'max_containers_per_extraction',
+      'max_failed_extractions',
+      'max_deletes_per_request',
+      'yield_frequency'
+    ].each do |config|
+      it "configures #{config} of bulk filter" do
+        should contain_swift_proxy_config(
+          "filter:bulk/#{config}").with_value(p[config.to_sym])
+      end
     end
   end
 
-  describe "when overriding default parameters" do
-    let :params do
-      {
+  context 'when using default parameters' do
+    it_behaves_like 'configures bulk filter'
+  end
+
+  context 'when overriding default parameters' do
+    before do
+      params.merge!(
         :max_containers_per_extraction => 5000,
         :max_failed_extractions        => 500,
         :max_deletes_per_request       => 5000,
         :yield_frequency               => 10
-      }
-    end
-    it 'should build the fragment with correct parameters' do
-      verify_contents(subject, fragment_file,
-        [
-          '[filter:bulk]',
-          'use = egg:swift#bulk',
-          'max_containers_per_extraction = 5000',
-          'max_failed_extractions = 500',
-          'max_deletes_per_request = 5000',
-          'yield_frequency = 10',
-        ]
       )
     end
+    it_behaves_like 'configures bulk filter'
   end
-
 end
