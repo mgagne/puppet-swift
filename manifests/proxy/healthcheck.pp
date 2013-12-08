@@ -13,12 +13,11 @@
 #
 # Copyright 2011 Puppetlabs Inc, unless otherwise noted.
 #
-class swift::proxy::healthcheck() {
+class swift::proxy::healthcheck {
 
-  concat::fragment { 'swift_healthcheck':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/healthcheck.conf.erb'),
-    order   => '25',
+  $filter = 'filter:healthcheck'
+
+  swift_proxy_config {
+    "${filter}/use": value  => 'egg:swift#healthcheck';
   }
-
 }
