@@ -16,12 +16,11 @@
 # Copyright 2012 eNovance licensing@enovance.com
 #
 
-class swift::proxy::tempurl() {
+class swift::proxy::tempurl {
 
-  concat::fragment { 'swift-proxy-tempurl':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/tempurl.conf.erb'),
-    order   => '29',
+  $filter = 'filter:tempurl'
+
+  swift_proxy_config {
+    "${filter}/use": value  => 'egg:swift#tempurl';
   }
-
 }
