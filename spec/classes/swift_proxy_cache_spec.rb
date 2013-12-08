@@ -8,13 +8,16 @@ describe 'swift::proxy::cache' do
       :processorcount  => 1 }
   end
 
-
   let :default_params do
     { :memcache_servers => ['127.0.0.1:11211'] }
   end
 
   let :params do
     {}
+  end
+
+  let :pre_condition do
+    ''
   end
 
   shared_examples_for 'configures cache filter' do
@@ -47,10 +50,7 @@ describe 'swift::proxy::cache' do
     context 'with local memcache_servers' do
       before do
         params.merge!(:memcache_servers => '127.0.0.1:11211')
-      end
-
-      let :pre_condition do
-        'class { "memcached": max_memory => 1 }'
+        pre_condition = 'class { "memcached": max_memory => 1 }'
       end
 
       it 'requires Memcached class' do
