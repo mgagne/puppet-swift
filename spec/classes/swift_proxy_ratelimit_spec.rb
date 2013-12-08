@@ -2,60 +2,56 @@ require 'spec_helper'
 
 describe 'swift::proxy::ratelimit' do
 
-  let :facts do
-    {
-      :concat_basedir => '/var/lib/puppet/concat'
-    }
+  let :default_params do
+    { :clock_accuracy         => 1000,
+      :max_sleep_time_seconds => 60,
+      :log_sleep_time_seconds => 0,
+      :rate_buffer_seconds    => 5,
+      :account_ratelimit      => 0 }
   end
 
-  let :pre_condition do
-    'class { "concat::setup": }
-     concat { "/etc/swift/proxy-server.conf": }'
+  let :params do
+    {}
   end
 
-  let :fragment_file do
-    "/var/lib/puppet/concat/_etc_swift_proxy-server.conf/fragments/26_swift_ratelimit"
-  end
+  shared_examples_for 'ratelimit filter' do
+    let :p do
+      default_params.merge(params)
+    end
 
-  describe "when using default parameters" do
-    it 'should build the fragment with correct parameters' do
-      verify_contents(subject, fragment_file,
-        [
-          '[filter:ratelimit]',
-          'use = egg:swift#ratelimit',
-          'clock_accuracy = 1000',
-          'max_sleep_time_seconds = 60',
-          'log_sleep_time_seconds = 0',
-          'rate_buffer_seconds = 5',
-          'account_ratelimit = 0',
-        ]
-      )
+    it 'configures ratelimit filter' do
+      should contain_swift_proxy_config(
+          'filter:ratelimit/use').with_value('egg:swift#ratelimit')
+    end
+
+    [ 'clock_accuracy',
+      'max_sleep_time_seconds',
+      'log_sleep_time_seconds',
+      'rate_buffer_seconds',
+      'account_ratelimit'
+    ].each do |config|
+      it "configures #{config} of ratelimit filter" do
+        should contain_swift_proxy_config(
+          "filter:ratelimit/#{config}").with_value(p[config.to_sym])
+      end
     end
   end
 
-  describe "when overriding default parameters" do
-    let :params do
-      {
+  context 'with default parameters' do
+    it_behaves_like 'ratelimit filter'
+  end
+
+  context 'when overriding default parameters' do
+    before do
+      params.merge!(
         :clock_accuracy         => 9436,
         :max_sleep_time_seconds => 3600,
         :log_sleep_time_seconds => 42,
         :rate_buffer_seconds    => 51,
         :account_ratelimit      => 69
-      }
-    end
-    it 'should build the fragment with correct parameters' do
-      verify_contents(subject, fragment_file,
-        [
-          '[filter:ratelimit]',
-          'use = egg:swift#ratelimit',
-          'clock_accuracy = 9436',
-          'max_sleep_time_seconds = 3600',
-          'log_sleep_time_seconds = 42',
-          'rate_buffer_seconds = 51',
-          'account_ratelimit = 69',
-        ]
       )
     end
-  end
 
+    it_behaves_like 'ratelimit filter'
+  end
 end

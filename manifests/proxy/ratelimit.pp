@@ -30,17 +30,21 @@
 # Copyright 2012 eNovance licensing@enovance.com
 #
 class swift::proxy::ratelimit(
-  $clock_accuracy = 1000,
+  $clock_accuracy         = 1000,
   $max_sleep_time_seconds = 60,
   $log_sleep_time_seconds = 0,
-  $rate_buffer_seconds = 5,
-  $account_ratelimit = 0
+  $rate_buffer_seconds    = 5,
+  $account_ratelimit      = 0
 ) {
 
-  concat::fragment { 'swift_ratelimit':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/ratelimit.conf.erb'),
-    order   => '26',
-  }
+  $filter = 'filter:ratelimit'
 
+  swift_proxy_config {
+    "${filter}/use":                    value  => 'egg:swift#ratelimit';
+    "${filter}/clock_accuracy":         value  => $clock_accuracy;
+    "${filter}/max_sleep_time_seconds": value  => $max_sleep_time_seconds;
+    "${filter}/log_sleep_time_seconds": value  => $log_sleep_time_seconds;
+    "${filter}/rate_buffer_seconds":    value  => $rate_buffer_seconds;
+    "${filter}/account_ratelimit":      value  => $account_ratelimit;
+  }
 }
