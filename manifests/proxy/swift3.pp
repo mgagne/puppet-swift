@@ -20,15 +20,14 @@ class swift::proxy::swift3(
 
   include swift::params
 
+  $filter = 'filter:swift3'
+
   package { 'swift-plugin-s3':
     ensure => $ensure,
     name   => $::swift::params::swift3,
   }
 
-  concat::fragment { 'swift_swift3':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/swift3.conf.erb'),
-    order   => '27',
+  swift_proxy_config {
+    "${filter}/use": value => 'egg:swift#swift3';
   }
-
 }

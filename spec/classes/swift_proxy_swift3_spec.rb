@@ -3,21 +3,42 @@ require 'spec_helper'
 describe 'swift::proxy::swift3' do
 
   let :facts do
-    { :concat_basedir  => '/var/lib/puppet/concat',
-      :osfamily        => 'Debian',
-      :operatingsystem => 'Ubuntu' }
+    { :operatingsystem => 'Ubuntu',
+      :osfamily        => 'Debian' }
   end
 
-  let :pre_condition do
-    'class { "concat::setup": }
-     concat { "/etc/swift/proxy-server.conf": }'
+  let :default_params do
+    { :ensure => 'present' }
   end
 
-  let :fragment_file do
-    "/var/lib/puppet/concat/_etc_swift_proxy-server.conf/fragments/27_swift_swift3"
+  let :params do
+    {}
   end
 
-  it { should contain_file(fragment_file).with_content(/[filter:swift3]/) }
-  it { should contain_file(fragment_file).with_content(/use = egg:swift3#swift3/) }
+  shared_examples_for 'swift3 filter' do
+    let :p do
+      default_params.merge(params)
+    end
 
+    it { should contain_package('swift-plugin-s3').with_ensure(p[:ensure]) }
+
+    it 'configures swift3 filter' do
+      should contain_swift_proxy_config(
+          'filter:swift3/use').with_value('egg:swift#swift3')
+    end
+  end
+
+  context 'with default parameters' do
+    it_behaves_like 'swift3 filter'
+  end
+
+  context 'when overriding default parameters' do
+    before do
+      params.merge!(
+       :ensure => 'latest'
+      )
+    end
+
+    it_behaves_like 'swift3 filter'
+  end
 end
