@@ -18,10 +18,9 @@
 # Configure Swift Account Quotas
 #
 
-class swift::proxy::account_quotas() {
-  concat::fragment { 'swift_account_quotas':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/account_quotas.conf.erb'),
-    order   => '80',
+class swift::proxy::account_quotas {
+
+  swift_proxy_config { 'filter:account-quotas/use':
+    value => 'egg:swift#account_quotas'
   }
 }

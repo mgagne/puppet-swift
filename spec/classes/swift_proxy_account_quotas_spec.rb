@@ -22,22 +22,8 @@ require 'spec_helper'
 
 describe 'swift::proxy::account_quotas' do
 
-  let :facts do
-    {
-      :concat_basedir => '/var/lib/puppet/concat'
-    }
+  it 'configures account-quotas filter' do
+    should contain_swift_proxy_config(
+      'filter:account-quotas/use').with_value('egg:swift#account_quotas')
   end
-
-  let :pre_condition do
-    'class { "concat::setup": }
-    concat { "/etc/swift/proxy-server.conf": }'
-  end
-
-  let :fragment_file do
-    "/var/lib/puppet/concat/_etc_swift_proxy-server.conf/fragments/80_swift_account_quotas"
-  end
-
-  it { should contain_file(fragment_file).with_content(/\[filter:account-quotas\]/) }
-  it { should contain_file(fragment_file).with_content(/use = egg:swift#account_quotas/) }
-
 end
