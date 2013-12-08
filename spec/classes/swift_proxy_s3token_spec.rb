@@ -2,56 +2,52 @@ require 'spec_helper'
 
 describe 'swift::proxy::s3token' do
 
-  let :facts do
-    {
-      :concat_basedir => '/var/lib/puppet/concat'
-    }
+  let :default_params do
+    { :auth_host     => '127.0.0.1',
+      :auth_port     => 35357,
+      :auth_protocol => 'http' }
   end
 
-  let :pre_condition do
-    'class { "concat::setup": }
-     concat { "/etc/swift/proxy-server.conf": }'
+  let :params do
+    {}
   end
 
-  let :fragment_file do
-    "/var/lib/puppet/concat/_etc_swift_proxy-server.conf/fragments/28_swift_s3token"
-  end
-
-  it { should include_class('keystone::python') }
-
-  describe "when using default parameters" do
-    it 'should build the fragment with correct parameters' do
-      verify_contents(subject, fragment_file,
-        [
-          '[filter:s3token]',
-          'paste.filter_factory = keystone.middleware.s3_token:filter_factory',
-          'auth_port = 35357',
-          'auth_protocol = http',
-          'auth_host = 127.0.0.1'
-        ]
-      )
+  shared_examples_for 's3token filter' do
+    let :p do
+      default_params.merge(params)
     end
-  end
 
-  describe "when overriding default parameters" do
-    let :params do
-      {
-          :auth_port     => 4212,
-          :auth_protocol => 'https',
-          :auth_host     => '1.2.3.4'
+    it { should contain_class('keystone::python') }
+
+    it {
+      should contain_swift_proxy_config(
+          'filter:s3token/use').with_value('egg:swift#s3token')
+    }
+
+    [ 'auth_host',
+      'auth_port',
+      'auth_protocol'
+    ].each do |config|
+      it {
+        should contain_swift_proxy_config(
+          "filter:s3token/#{config}").with_value(p[config.to_sym])
       }
     end
-    it 'should build the fragment with correct parameters' do
-      verify_contents(subject, fragment_file,
-        [
-          '[filter:s3token]',
-          'paste.filter_factory = keystone.middleware.s3_token:filter_factory',
-          'auth_port = 4212',
-          'auth_protocol = https',
-          'auth_host = 1.2.3.4'
-        ]
-      )
-    end
   end
 
+  context 'with default parameters' do
+    it_behaves_like 's3token filter'
+  end
+
+  context 'when overriding default parameters' do
+    before do
+      params.merge!(
+        :auth_port     => 4212,
+        :auth_protocol => 'https',
+        :auth_host     => '1.2.3.4'
+      )
+    end
+
+    it_behaves_like 's3token filter'
+  end
 end

@@ -22,16 +22,19 @@
 # Copyright 2012 eNovance licensing@enovance.com
 #
 class swift::proxy::s3token(
-  $auth_host = '127.0.0.1',
-  $auth_port = '35357',
+  $auth_host     = '127.0.0.1',
+  $auth_port     = '35357',
   $auth_protocol = 'http'
 ) {
 
   include keystone::python
 
-  concat::fragment { 'swift_s3token':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/s3token.conf.erb'),
-    order   => '28',
+  $filter = 'filter:s3token'
+
+  swift_proxy_config {
+    "${filter}/use":           value  => 'egg:swift#s3token';
+    "${filter}/auth_host":     value  => $auth_host;
+    "${filter}/auth_port":     value  => $auth_port;
+    "${filter}/auth_protocol": value  => $auth_protocol;
   }
 }
