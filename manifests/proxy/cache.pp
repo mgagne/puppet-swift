@@ -22,15 +22,21 @@ class swift::proxy::cache(
   $memcache_servers = ['127.0.0.1:11211']
 ) {
 
+  $filter = 'filter:cache'
+
   # require the memcached class if its on the same machine
-  if $memcache_servers =~ /^127\.0\.0\.1/ {
+  if grep($memcache_servers, '^127\.0\.0\.1') {
     Class['memcached'] -> Class['swift::proxy::cache']
   }
 
-  concat::fragment { 'swift_cache':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy/cache.conf.erb'),
-    order   => '23',
+  if is_array($memcache_servers) {
+    $memcache_servers_real = join($memcache_servers, ',')
+  } else {
+    $memcache_servers_real = $memcache_servers
   }
 
+  swift_proxy_config {
+    "${filter}/use":              value  => 'egg:swift#memcache';
+    "${filter}/memcache_servers": value  => $memcache_servers_real;
+  }
 }
