@@ -40,29 +40,28 @@
 #
 class swift::proxy(
   $proxy_local_net_ip,
-  $port = '8080',
-  $pipeline = ['healthcheck', 'cache', 'tempauth', 'proxy-server'],
-  $workers = $::processorcount,
+  $port           = 8080,
+  $pipeline       = ['healthcheck', 'cache', 'tempauth', 'proxy-server'],
+  $workers        = $::processorcount,
   $allow_account_management = true,
   $account_autocreate = true,
-  $log_headers = 'False',
-  $log_udp_host = '',
-  $log_udp_port = '',
-  $log_address = '/dev/log',
-  $log_level = 'INFO',
-  $log_facility = 'LOG_LOCAL1',
-  $log_handoffs = true,
+  $log_headers    = false,
+  $log_udp_host   = '',
+  $log_udp_port   = '',
+  $log_address    = '/dev/log',
+  $log_level      = 'INFO',
+  $log_facility   = 'LOG_LOCAL1',
+  $log_handoffs   = true,
   $package_ensure = 'present'
 ) {
 
   include swift::params
-  include concat::setup
 
   validate_bool($account_autocreate)
   validate_bool($allow_account_management)
   validate_array($pipeline)
 
-  if(member($pipeline, 'tempauth')) {
+  if (member($pipeline, 'tempauth')) {
     $auth_type = 'tempauth'
   } elsif(member($pipeline, 'swauth')) {
     $auth_type = 'swauth'
@@ -72,20 +71,32 @@ class swift::proxy(
     warning('no auth type provided in the pipeline')
   }
 
-  if(! member($pipeline, 'proxy-server')) {
+  if (! member($pipeline, 'proxy-server')) {
     warning('pipeline parameter must contain proxy-server')
   }
 
-  if($auth_type == 'tempauth' and ! $account_autocreate ){
+  if ($auth_type == 'tempauth' and ! $account_autocreate ) {
     fail('account_autocreate must be set to true when auth_type is tempauth')
   }
+
+  Package['swift-proxy'] -> Swift_proxy_config<||>
+  Swift_proxy_config<||> ~> Service['swift-proxy']
 
   package { 'swift-proxy':
     ensure => $package_ensure,
     name   => $::swift::params::proxy_package_name,
   }
 
-  concat { '/etc/swift/proxy-server.conf':
+  service { 'swift-proxy':
+    ensure    => running,
+    name      => $::swift::params::proxy_service_name,
+    enable    => true,
+    provider  => $::swift::params::service_provider,
+    hasstatus => true,
+  }
+
+  file { '/etc/swift/proxy-server.conf':
+    ensure  => present,
     owner   => 'swift',
     group   => 'swift',
     mode    => '0660',
@@ -95,29 +106,52 @@ class swift::proxy(
   $required_classes = split(
     inline_template(
       "<%=
-          (pipeline - ['proxy-server']).collect do |x|
-            'swift::proxy::' + x
+          (@pipeline - ['proxy-server']).collect do |x|
+            'swift::proxy::' + x.gsub('-', '_')
           end.join(',')
       %>"), ',')
 
-  # you can now add your custom fragments at the user level
-  concat::fragment { 'swift_proxy':
-    target  => '/etc/swift/proxy-server.conf',
-    content => template('swift/proxy-server.conf.erb'),
-    order   => '00',
+  swift_proxy_config { 'pipeline:main/pipeline':
+    value   => join($pipeline, ' '),
     # require classes for each of the elements of the pipeline
     # this is to ensure the user gets reasonable elements if he
     # does not specify the backends for every specified element of
     # the pipeline
-    before  => Class[$required_classes],
+    require => Class[$required_classes]
   }
 
-  service { 'swift-proxy':
-    ensure    => running,
-    name      => $::swift::params::proxy_service_name,
-    enable    => true,
-    provider  => $::swift::params::service_provider,
-    hasstatus => true,
-    subscribe => Concat['/etc/swift/proxy-server.conf'],
+  if $proxy_local_net_ip {
+    swift_proxy_config { 'DEFAULT/bind_ip': value => $proxy_local_net_ip }
+  } else {
+    swift_proxy_config { 'DEFAULT/bind_ip': ensure => absent }
+  }
+
+  swift_proxy_config {
+    'DEFAULT/bind_port': value => $port;
+    'DEFAULT/workers':   value => $workers;
+    # logging
+    'DEFAULT/log_facility': value => $log_facility;
+    'DEFAULT/log_level':    value => $log_level;
+    'DEFAULT/log_headers':  value => $log_headers;
+    'DEFAULT/log_address':  value => $log_address;
+    # app:proxy-server
+    'app:proxy-server/set log_facility':   value => $log_facility;
+    'app:proxy-server/set log_level':      value => $log_level;
+    'app:proxy-server/set log_address':    value => $log_address;
+    'app:proxy-server/log_handoffs':       value => $log_handoffs;
+    'app:proxy-server/account_autocreate': value => $account_autocreate;
+    'app:proxy-server/allow_account_management': value => $allow_account_management;
+  }
+
+  if $log_udp_host {
+    swift_proxy_config { 'DEFAULT/log_udp_host': value => $log_udp_host }
+    if $log_udp_port {
+      swift_proxy_config { 'DEFAULT/log_udp_port': value => $log_udp_port }
+    } else {
+      swift_proxy_config { 'DEFAULT/log_udp_port': ensure => absent }
+    }
+  } else {
+    swift_proxy_config { 'DEFAULT/log_udp_host': ensure => absent }
+    swift_proxy_config { 'DEFAULT/log_udp_port': ensure => absent }
   }
 }
